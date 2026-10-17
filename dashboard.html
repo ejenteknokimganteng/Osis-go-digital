@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilik Suara E-Voting OSIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-card {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.85); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 pb-16">
+
+    <!-- Top Bar User -->
+    <div class="max-w-3xl mx-auto mb-6 flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <div>
+            <span class="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-wider">Pemilihan Ketua & Wakil OSIS</span>
+            <h1 id="namaUser" class="text-base font-bold text-slate-800 mt-1">Nama Siswa</h1>
+            <p id="nisnUser" class="text-xs text-slate-500">NISN: -</p>
+        </div>
+        <button onclick="logout()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-2 rounded-xl border border-rose-200 transition">Keluar</button>
+    </div>
+
+    <!-- Alert Instruksi -->
+    <div class="max-w-3xl mx-auto mb-6 bg-amber-50 border border-amber-200 p-4 rounded-2xl text-amber-800 text-xs leading-relaxed flex items-start gap-3">
+        <span class="text-base">⚠️</span>
+        <div>
+            <strong>Instruksi Pemilihan:</strong> Pilihlah salah satu pasangan calon di bawah ini. Suara Anda bersifat rahasia dan hanya dapat diberikan 1 (satu) kali.
+        </div>
+    </div>
+
+    <!-- List Paslon Dinamis -->
+    <div id="containerPaslon" class="max-w-3xl mx-auto space-y-6">
+        <!-- Generasi via JS -->
+    </div>
+
+    <!-- Modal Pop-Up Konfirmasi Pilihan -->
+    <div id="modalKonfirmasi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl border border-slate-100 animate-pop">
+            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+                ❓
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Konfirmasi Suara Anda</h3>
+            <p class="text-xs text-slate-500 mt-2">Apakah Anda yakin ingin memilih pasangan calon:</p>
+            
+            <div class="my-4 bg-indigo-50 border border-indigo-100 p-3.5 rounded-2xl">
+                <span id="pilihanNomor" class="text-xs font-bold text-indigo-600 block">PASLON 00</span>
+                <span id="pilihanNama" class="text-base font-extrabold text-slate-800 block mt-0.5">Nama Paslon</span>
+            </div>
+
+            <p class="text-[11px] text-rose-500 font-semibold mb-5">* Pilihan tidak dapat diubah setelah disetujui!</p>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="batalPilih()" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+                    Batal
+                </button>
+                <button id="btnProsesPilih" class="py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md shadow-indigo-200 transition active:scale-95">
+                    Ya, Yakin!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POP-UP NOTIFIKASI BERHASIL VOTING -->
+    <div id="modalSuksesVoting" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl border border-slate-100 animate-pop">
+            <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-lg shadow-emerald-100">
+                🎉
+            </div>
+            <h3 class="text-xl font-black text-slate-800">Voting Berhasil!</h3>
+            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                Terima kasih atas partisipasi Anda. Suara Anda telah berhasil dicatat oleh sistem secara rahasia dan aman.
+            </p>
+
+            <div class="my-5 p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600">
+                Otomatis kembali ke menu login dalam <strong id="countdownText" class="text-indigo-600 font-bold">3</strong> detik...
+            </div>
+
+            <button onclick="keHalamanAwal()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-200 transition active:scale-95">
+                Selesai & Keluar Sekarang
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const sessionUser = JSON.parse(localStorage.getItem('sessionUser'));
+        let targetPaslonSelected = null;
+
+        if (!sessionUser) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('namaUser').textContent = sessionUser.nama;
+            document.getElementById('nisnUser').textContent = 'NISN: ' + sessionUser.nisn;
+        }
+
+        // Render Paslon secara Dinamis dari localStorage
+        function renderPaslon() {
+            const rawData = localStorage.getItem('paslonList');
+            let paslonList = [];
+
+            if (rawData) {
+                paslonList = JSON.parse(rawData);
+            } else {
+                paslonList = [
+                    { no: 1, ketua: "Andika", wakil: "Fadly Ibnu", visi: "Mewujudkan OSIS yang aktif, kreatif, dan berteknologi.", misi: "Digitalisasi kegiatan siswa & optimalisasi ekskul.", foto: "" },
+                    { no: 2, ketua: "Qianu", wakil: "Rido", visi: "Menjadikan sekolah yang berprestasi dan solid.", misi: "Meningkatkan kedisiplinan dan rasa kekeluargaan.", foto: "" }
+                ];
+            }
+
+            const container = document.getElementById('containerPaslon');
+            container.innerHTML = '';
+
+            if (paslonList.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-8 rounded-3xl text-center border border-slate-200 text-slate-500 text-xs">
+                        Belum ada pasangan calon yang terdaftar di sistem.
+                    </div>
+                `;
+                return;
+            }
+
+            paslonList.forEach(p => {
+                const mediaFoto = p.foto 
+                    ? `<img src="${p.foto}" alt="Foto Paslon 0${p.no}" class="w-full h-full object-cover rounded-2xl">`
+                    : `<div class="text-slate-400 font-medium text-xs flex flex-col items-center gap-1">
+                        <span class="text-3xl">👤</span>
+                        <span>Foto Paslon 0${p.no}</span>
+                       </div>`;
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition duration-300 animate-card">
+                        <div class="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white flex justify-between items-center">
+                            <span class="font-bold text-xs tracking-wider uppercase">Pasangan Calon Nomor</span>
+                            <span class="bg-white text-indigo-600 font-black px-3.5 py-1 rounded-full text-sm shadow-sm">0${p.no}</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="h-56 bg-slate-100 rounded-2xl mb-4 flex items-center justify-center border border-slate-200 overflow-hidden relative">
+                                ${mediaFoto}
+                            </div>
+                            <h2 class="text-xl font-bold text-slate-800">${p.ketua} & ${p.wakil}</h2>
+                            <p class="text-xs text-indigo-600 font-semibold mt-0.5">Calon Ketua & Calon Wakil OSIS</p>
+                            
+                            <div class="mt-3 text-xs text-slate-600 space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <p><strong class="text-slate-800">Visi:</strong> ${p.visi}</p>
+                                <p><strong class="text-slate-800">Misi:</strong> ${p.misi}</p>
+                            </div>
+                            <button onclick="mintaKonfirmasi(${p.no}, '${p.ketua} & ${p.wakil}')" class="mt-5 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-lg shadow-indigo-200 transition active:scale-95 flex items-center justify-center gap-2">
+                                <span>🗳️ Coblos Paslon 0${p.no}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function mintaKonfirmasi(noPaslon, namaPaslon) {
+            targetPaslonSelected = noPaslon;
+            document.getElementById('pilihanNomor').textContent = `PASANGAN CALON 0${noPaslon}`;
+            document.getElementById('pilihanNama').textContent = namaPaslon;
+            document.getElementById('modalKonfirmasi').classList.remove('hidden');
+        }
+
+        function batalPilih() {
+            targetPaslonSelected = null;
+            document.getElementById('modalKonfirmasi').classList.add('hidden');
+        }
+
+        // KETIKA TOMBOL "YA, YAKIN!" DITEKAN
+        document.getElementById('btnProsesPilih').addEventListener('click', function() {
+            if (!targetPaslonSelected) return;
+
+            // 1. Rekapitulasi suara
+            let suara = JSON.parse(localStorage.getItem('suaraPaslon')) || {};
+            suara[targetPaslonSelected] = (suara[targetPaslonSelected] || 0) + 1;
+            localStorage.setItem('suaraPaslon', JSON.stringify(suara));
+
+            // 2. Kunci status pemilih
+            let daftarPemilih = JSON.parse(localStorage.getItem('pemilihData')) || [];
+            let idx = daftarPemilih.findIndex(p => p.nisn === sessionUser.nisn);
+            if (idx !== -1) {
+                daftarPemilih[idx].sudahMemilih = true;
+                localStorage.setItem('pemilihData', JSON.stringify(daftarPemilih));
+            }
+
+            // 3. Tutup modal konfirmasi & munculkan modal sukses + countdown
+            document.getElementById('modalKonfirmasi').classList.add('hidden');
+            tampilkanNotifSukses();
+        });
+
+        // FUNGSI NOTIFIKASI SUKSES & COUNTDOWN 3 DETIK
+        function tampilkanNotifSukses() {
+            const modalSukses = document.getElementById('modalSuksesVoting');
+            modalSukses.classList.remove('hidden');
+
+            let sisaWaktu = 3;
+            const countdownEl = document.getElementById('countdownText');
+
+            const timer = setInterval(() => {
+                sisaWaktu--;
+                if (countdownEl) countdownEl.textContent = sisaWaktu;
+
+                if (sisaWaktu <= 0) {
+                    clearInterval(timer);
+                    keHalamanAwal();
+                }
+            }, 1000);
+        }
+
+        function keHalamanAwal() {
+            localStorage.removeItem('sessionUser');
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('sessionUser');
+            window.location.href = 'index.html';
+        }
+
+        // Jalankan render paslon saat halaman dibuka
+        renderPaslon();
+    </script>
+</body>
+</html>
