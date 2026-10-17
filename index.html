@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Voting OSIS - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Card Login dengan Animasi -->
+    <div class="bg-white/95 backdrop-blur-md p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-slate-100 animate-fade-in">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-violet-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-3xl shadow-lg shadow-indigo-500/30 transform hover:scale-105 transition duration-300">
+                🗳️
+            </div>
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight">E-Voting OSIS</h1>
+            <p id="subTitle" class="text-xs text-slate-500 mt-1">Masukkan NISN & Token untuk memilih</p>
+        </div>
+
+        <!-- Form Login -->
+        <form id="formLogin" class="space-y-4">
+            
+            <!-- Dynamic Input 1 (NISN / Username Admin) -->
+            <div>
+                <label id="labelField1" class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">NISN / NIS</label>
+                <input type="text" id="inputNisn" required placeholder="Contoh: 123456" 
+                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none bg-slate-50 transition font-medium">
+            </div>
+
+            <!-- Dynamic Input 2 (Token Pemilihan / Password Admin) -->
+            <div>
+                <label id="labelField2" class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Token Pemilihan</label>
+                <input type="password" id="inputToken" required placeholder="Masukkan token rahasia" 
+                    class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none bg-slate-50 transition">
+            </div>
+
+            <button type="submit" id="btnSubmit" 
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-indigo-500/30 transition duration-200 active:scale-95 flex items-center justify-center gap-2">
+                <span id="btnText">Masuk ke Bilik Suara</span>
+                <span class="text-lg">→</span>
+            </button>
+        </form>
+
+        <!-- Toggle Switch Antara Siswa & Admin -->
+        <div class="mt-6 text-center border-t border-slate-100 pt-4">
+            <button type="button" id="btnToggleRole" onclick="toggleRole()" class="text-xs text-indigo-600 font-bold hover:text-indigo-800 transition">
+                Masuk Panel Admin &rarr;
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Notifikasi Status (Berhasil / Gagal) -->
+    <div id="modalNotif" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div id="modalBox" class="bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-2xl border border-slate-100 animate-fade-in">
+            <div id="modalIcon" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl"></div>
+            <h3 id="modalTitle" class="text-lg font-bold text-slate-800"></h3>
+            <p id="modalMessage" class="text-xs text-slate-500 mt-1 mb-5 leading-relaxed"></p>
+            <button id="modalBtn" onclick="closeModal()" class="w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition active:scale-95">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isModeAdmin = false;
+
+        function toggleRole() {
+            isModeAdmin = !isModeAdmin;
+
+            const subTitle = document.getElementById('subTitle');
+            const labelField1 = document.getElementById('labelField1');
+            const labelField2 = document.getElementById('labelField2');
+            const inputNisn = document.getElementById('inputNisn');
+            const inputToken = document.getElementById('inputToken');
+            const btnText = document.getElementById('btnText');
+            const btnToggleRole = document.getElementById('btnToggleRole');
+
+            document.getElementById('formLogin').reset();
+
+            if (isModeAdmin) {
+                subTitle.textContent = "Akses Khusus Administrator Sistem";
+                labelField1.textContent = "Username Admin";
+                inputNisn.placeholder = "Masukkan username admin...";
+                labelField2.textContent = "Password Admin";
+                inputToken.placeholder = "Masukkan password admin...";
+                btnText.textContent = "Masuk Panel Admin";
+                btnToggleRole.innerHTML = "&larr; Kembali ke Login Pemilih (Siswa)";
+            } else {
+                subTitle.textContent = "Masukkan NISN & Token untuk memilih";
+                labelField1.textContent = "NISN / NIS";
+                inputNisn.placeholder = "Contoh: 123456";
+                labelField2.textContent = "Token Pemilihan";
+                inputToken.placeholder = "Masukkan token rahasia";
+                btnText.textContent = "Masuk ke Bilik Suara";
+                btnToggleRole.innerHTML = "Masuk Panel Admin &rarr;";
+            }
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const val1 = document.getElementById('inputNisn').value.trim();
+            const val2 = document.getElementById('inputToken').value.trim();
+
+            if (isModeAdmin) {
+                // VERIFIKASI LOGIN ADMIN (Default: admin / admin123)
+                if (val1 === 'admin' && val2 === 'admin123') {
+                    showModal('berhasil', 'Akses Diterima!', 'Selamat datang Administrator. Mengalihkan ke Panel Admin...');
+                    localStorage.setItem('isAdminLoggedIn', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'admin.html';
+                    }, 1200);
+                } else {
+                    // JIKA SISWA / PILIH ADMIN TAPI KODE SALAH
+                    showModal('gagal', 'Akses Ditolak!', 'Username atau Password Administrator yang Anda masukkan salah.');
+                }
+            } else {
+                // VERIFIKASI LOGIN SISWA (PEMILIH)
+                let daftarPemilih = JSON.parse(localStorage.getItem('pemilihData')) || [
+                    { nisn: '123456', nama: 'Siswa Contoh', token: 'TOKEN123', sudahMemilih: false }
+                ];
+
+                const user = daftarPemilih.find(p => p.nisn === val1 && p.token === val2);
+
+                if (user) {
+                    if (user.sudahMemilih) {
+                        showModal('gagal', 'Akses Ditolak!', 'Anda sudah pernah menggunakan hak suara pada pemilihan ini.');
+                    } else {
+                        showModal('berhasil', 'Login Berhasil!', `Selamat datang, ${user.nama}. Mengalihkan ke bilik suara...`);
+                        localStorage.setItem('sessionUser', JSON.stringify(user));
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1200);
+                    }
+                } else {
+                    showModal('gagal', 'Login Gagal!', 'NISN atau Token rahasia yang Anda masukkan salah.');
+                }
+            }
+        });
+
+        function showModal(tipe, judul, pesan) {
+            const modal = document.getElementById('modalNotif');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const message = document.getElementById('modalMessage');
+            const btn = document.getElementById('modalBtn');
+
+            title.textContent = judul;
+            message.textContent = pesan;
+
+            if (tipe === 'berhasil') {
+                icon.className = "w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-bold";
+                icon.textContent = '✓';
+                btn.className = "w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition";
+            } else {
+                icon.className = "w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-bold";
+                icon.textContent = '✕';
+                btn.className = "w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modalNotif').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
